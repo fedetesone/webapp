@@ -1,158 +1,198 @@
 # Next.js + TypeScript Web Application
 
-## What Changed
+Modern Next.js application with TypeScript, Tailwind CSS, and shadcn/ui components.
 
-This repository started as a **Vite + TypeScript** template project. It has been converted to a modern **Next.js** application with the following tech stack:
-
-- **Next.js 15** (App Router)
-- **TypeScript**
-- **Tailwind CSS**
-- **shadcn/ui** component library
-- **pnpm** package manager
-- **Volta** for Node.js version management
-
-## Prerequisites
-
-Before you begin, you'll need to install Volta, which acts as a "virtual environment" for JavaScript projects by managing Node.js and pnpm versions automatically.
-
-### Installing Volta
-
-**macOS and Linux:**
-```bash
-curl https://get.volta.sh | bash
-```
-
-**Windows:**
-Download and run the Windows installer from [volta.sh](https://volta.sh)
-
-After installation, restart your terminal. Volta will automatically use the pinned Node.js and pnpm versions specified in `package.json`.
-
-## Local Development
-
-### 1. Install Dependencies
+## Quick Start
 
 ```bash
+# Install dependencies
 pnpm install
-```
 
-If you don't have pnpm installed globally, Volta will install it automatically when you run this command.
-
-### 2. Run Development Server
-
-```bash
+# Start development server
 pnpm dev
 ```
 
-The application will start at [http://localhost:3000](http://localhost:3000)
-
-### 3. Build for Production
-
-```bash
-pnpm build
-```
-
-This creates an optimized production build in the `.next` directory.
-
-### 4. Run Production Server Locally
-
-```bash
-pnpm start
-```
-
-This runs the production build locally (requires running `pnpm build` first).
-
-### 5. Lint Code
-
-```bash
-pnpm lint
-```
-
-Runs ESLint to check for code quality issues.
+Open [http://localhost:3000](http://localhost:3000) to see the app.
 
 ## Project Structure
 
 ```
-├── app/                    # Next.js App Router directory
-│   ├── layout.tsx         # Root layout component
-│   ├── page.tsx           # Home page
-│   ├── globals.css        # Global styles with Tailwind
-│   └── api/               # API routes
-│       └── health/        # Health check endpoint
-├── components/            # React components
-│   └── ui/               # shadcn/ui components
-├── lib/                  # Utility functions
-├── public/               # Static assets
-├── package.json          # Dependencies and scripts
-├── tsconfig.json         # TypeScript configuration
-└── tailwind.config.ts    # Tailwind CSS configuration
+webapp/
+├── app/                          # Next.js App Router (routes & pages)
+│   ├── layout.tsx               # Root layout - wraps all pages
+│   ├── page.tsx                 # Home page (/) - Hello World with counter
+│   ├── globals.css              # Global styles + Tailwind directives
+│   └── api/
+│       └── health/
+│           └── route.ts         # GET /api/health endpoint
+│
+├── components/                   # React components
+│   └── ui/                      # shadcn/ui components
+│       ├── button.tsx           # Button component with variants
+│       └── card.tsx             # Card component with subcomponents
+│
+├── lib/
+│   └── utils.ts                 # Utilities (cn helper for class merging)
+│
+├── public/                       # Static assets (served at /)
+│   ├── fonts/                   # Font files
+│   └── *.svg                    # SVG images
+│
+├── package.json                  # Dependencies & scripts
+├── tsconfig.json                 # TypeScript configuration
+├── tailwind.config.ts            # Tailwind CSS configuration
+├── postcss.config.mjs            # PostCSS configuration
+├── components.json               # shadcn/ui configuration
+└── .eslintrc.json               # ESLint configuration
 ```
 
-## Deploy to Vercel
+## Understanding the Code
 
-Vercel is the easiest way to deploy Next.js applications. No environment variables are needed for this Hello World app.
+### Home Page (`app/page.tsx`)
 
-### Steps:
+The main page is a client component with a simple counter:
+- Uses `'use client'` directive for client-side interactivity
+- Imports shadcn/ui components (Card, Button)
+- Manages counter state with React's `useState`
+- Button increments counter on click
 
-1. **Push to GitHub**
-   ```bash
-   git add .
-   git commit -m "Initial Next.js setup"
-   git push origin main
-   ```
+### API Route (`app/api/health/route.ts`)
 
-2. **Import into Vercel**
-   - Go to [vercel.com](https://vercel.com)
-   - Sign up or log in with your GitHub account
-   - Click "New Project"
-   - Import your repository
-   - Vercel will automatically detect Next.js and configure everything
+RESTful API endpoint following Next.js conventions:
+- Exports async `GET` function
+- Returns JSON: `{ ok: true, timestamp: "<ISO string>" }`
+- Accessible at `/api/health`
 
-3. **Deploy**
-   - Click "Deploy"
-   - Vercel will build and deploy your application
-   - You'll receive a URL like `your-project.vercel.app`
+### Layout (`app/layout.tsx`)
 
-4. **Custom Domain (Optional)**
-   - After deployment, go to your project settings
-   - Navigate to "Domains"
-   - Add your custom domain
+Root layout that wraps all pages:
+- Defines metadata (title, description)
+- Imports global CSS
+- Provides HTML structure
 
-## API Endpoints
+### Component System
 
-### Health Check
+**shadcn/ui Philosophy:**
+- Components are added to your project (not npm packages)
+- Full control over component code
+- Built with Radix UI primitives
+- Styled with Tailwind CSS
+
+**Key Components:**
+- `Button` - Uses class-variance-authority for variants
+- `Card` - Composite component (Header, Title, Description, Content, Footer)
+
+### Styling
+
+**Tailwind Setup:**
+```css
+/* app/globals.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 ```
-GET /api/health
+
+**CSS Variables:**
+- Theme colors defined as CSS custom properties
+- Supports light/dark mode via `.dark` class
+- Accessed via `hsl(var(--variable-name))`
+
+**Utility Function:**
+```typescript
+// lib/utils.ts
+cn(...classes) // Merges Tailwind classes intelligently
 ```
 
-Returns:
+## Available Scripts
+
+```bash
+pnpm dev      # Start dev server (http://localhost:3000)
+pnpm build    # Build for production
+pnpm start    # Run production build locally
+pnpm lint     # Run ESLint
+```
+
+## Tech Stack
+
+| Layer          | Technology        | Why                                |
+|----------------|-------------------|------------------------------------|
+| Framework      | Next.js 15        | React framework with App Router    |
+| Language       | TypeScript        | Type safety                        |
+| Styling        | Tailwind CSS      | Utility-first CSS                  |
+| Components     | shadcn/ui         | Accessible, customizable UI        |
+| Package Mgr    | pnpm              | Fast, efficient dependency manager |
+| Version Mgr    | Volta             | Node/pnpm version pinning          |
+
+## Adding New Pages
+
+Next.js uses file-system routing in the `app/` directory:
+
+```typescript
+// app/about/page.tsx
+export default function About() {
+  return <div>About Page</div>;
+}
+// Accessible at /about
+```
+
+## Adding New API Routes
+
+```typescript
+// app/api/users/route.ts
+import { NextResponse } from 'next/server';
+
+export async function GET() {
+  return NextResponse.json({ users: [] });
+}
+// Accessible at /api/users
+```
+
+## Adding shadcn/ui Components
+
+```bash
+# Add a new component (e.g., input)
+npx shadcn@latest add input
+```
+
+This downloads the component to `components/ui/input.tsx`.
+
+## Environment Setup (Volta)
+
+Volta ensures consistent Node.js and pnpm versions across environments.
+
+**Install Volta:**
+```bash
+# macOS/Linux
+curl https://get.volta.sh | bash
+
+# Windows
+# Download installer from volta.sh
+```
+
+After installation, Volta automatically uses versions specified in `package.json`:
 ```json
-{
-  "ok": true,
-  "timestamp": "2026-01-11T22:56:00.000Z"
+"volta": {
+  "node": "20.18.2",
+  "pnpm": "10.28.0"
 }
 ```
 
-## Tech Stack Details
+## Deployment
 
-### Next.js App Router
-This project uses the App Router (not Pages Router), which is the recommended approach for new Next.js applications. Routes are defined by the folder structure in the `app` directory.
+**Vercel (Recommended):**
+1. Push to GitHub
+2. Import repository in [vercel.com](https://vercel.com)
+3. Deploy (auto-configured for Next.js)
 
-### TypeScript
-Full TypeScript support with strict mode enabled for better type safety.
-
-### Tailwind CSS
-Utility-first CSS framework configured with custom theme variables for consistent styling.
-
-### shadcn/ui
-A collection of beautifully designed, accessible React components built with Radix UI and Tailwind CSS. Components are added to your project directly (not as an npm package), giving you full control.
-
-### Volta
-Volta ensures everyone on the team uses the same Node.js and pnpm versions, eliminating "works on my machine" issues. The versions are pinned in `package.json` under the `volta` field.
+**Build Output:**
+- Static pages are pre-rendered
+- API routes are serverless functions
+- Client components are hydrated on the client
 
 ## Learn More
 
-- [Next.js Documentation](https://nextjs.org/docs)
-- [TypeScript Documentation](https://www.typescriptlang.org/docs)
-- [Tailwind CSS Documentation](https://tailwindcss.com/docs)
-- [shadcn/ui Documentation](https://ui.shadcn.com)
-- [Volta Documentation](https://docs.volta.sh)
+- [Next.js App Router](https://nextjs.org/docs/app) - Routing & layouts
+- [TypeScript](https://www.typescriptlang.org/docs) - Type system
+- [Tailwind CSS](https://tailwindcss.com/docs) - Utility classes
+- [shadcn/ui](https://ui.shadcn.com) - Component documentation
+- [Volta](https://docs.volta.sh) - Version management
