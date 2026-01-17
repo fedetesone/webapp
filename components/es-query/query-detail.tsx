@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useMemo } from 'react';
-import { Check, Copy, FileCode, Terminal, FileText } from 'lucide-react';
+import { Check, Copy, FileCode, Terminal, FileText, Braces } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   ESNode,
@@ -12,7 +12,7 @@ import {
 } from '@/lib/core/es-query';
 import { cn } from '@/lib/utils';
 
-type TabType = 'summary' | 'java' | 'curl' | 'python';
+type TabType = 'summary' | 'json' | 'java' | 'curl' | 'python';
 
 interface QueryDetailProps {
   parseResult: ParseResult | null;
@@ -228,6 +228,7 @@ export function QueryDetail({ parseResult, selectedNode }: QueryDetailProps) {
 
   const tabs: { id: TabType; label: string; icon: React.ReactNode }[] = [
     { id: 'summary', label: 'Summary', icon: <FileText className="w-3.5 h-3.5" /> },
+    { id: 'json', label: 'JSON', icon: <Braces className="w-3.5 h-3.5" /> },
     { id: 'java', label: 'Java', icon: <FileCode className="w-3.5 h-3.5" /> },
     { id: 'curl', label: 'cURL', icon: <Terminal className="w-3.5 h-3.5" /> },
     { id: 'python', label: 'Python', icon: <FileCode className="w-3.5 h-3.5" /> },
@@ -243,6 +244,8 @@ export function QueryDetail({ parseResult, selectedNode }: QueryDetailProps) {
     switch (activeTab) {
       case 'summary':
         return generateSummary(root);
+      case 'json':
+        return JSON.stringify(root.raw, null, 2);
       case 'java':
         return generateJava(root);
       case 'python':

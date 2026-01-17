@@ -54,27 +54,70 @@ export default function ESQueryPage() {
     setSelectedNodeId(nodeId);
   }, []);
 
-  const handleNodeRemove = useCallback(
-    (nodeId: string) => {
-      // Find and remove the node from the JSON
-      // For now, just deselect
-      if (selectedNodeId === nodeId) {
-        setSelectedNodeId(null);
+  // Find node in tree by ID
+  const findNode = useCallback(
+    (node: ESNode, id: string): ESNode | null => {
+      if (node.id === id) return node;
+      for (const child of node.children) {
+        const found = findNode(child, id);
+        if (found) return found;
       }
-      // TODO: Implement actual node removal from JSON
+      return null;
     },
-    [selectedNodeId]
+    []
   );
 
-  // Find selected node in tree
-  const findNode = (node: ESNode, id: string): ESNode | null => {
-    if (node.id === id) return node;
-    for (const child of node.children) {
-      const found = findNode(child, id);
-      if (found) return found;
-    }
-    return null;
-  };
+  const handleNodeRemove = useCallback(
+    (nodeId: string) => {
+      if (!parseResult?.root) return;
+
+      // Find the node to get its path
+      const nodeToRemove = findNode(parseResult.root, nodeId);
+      if (!nodeToRemove || nodeToRemove.meta.path.length === 0) return;
+
+      try {
+        const json = JSON.parse(input);
+        const path = nodeToRemove.meta.path;
+
+        // Navigate to parent and remove the node
+        // Path looks like: ['query', 'bool', 'must', '0'] or ['query', 'script_score', 'query', 'bool']
+        let current = json;
+        const parentPath = path.slice(0, -1);
+        const lastKey = path[path.length - 1];
+
+        // Navigate to parent
+        for (const key of parentPath) {
+          if (current[key] === undefined) return;
+          current = current[key];
+        }
+
+        // Remove the node
+        if (Array.isArray(current)) {
+          const index = parseInt(lastKey, 10);
+          if (!isNaN(index)) {
+            current.splice(index, 1);
+            // If array is now empty, we might want to remove it too
+          }
+        } else if (typeof current === 'object' && current !== null) {
+          delete current[lastKey];
+        }
+
+        // Update input with modified JSON
+        setInput(JSON.stringify(json, null, 2));
+
+        // Clear selection
+        if (selectedNodeId === nodeId) {
+          setSelectedNodeId(null);
+        }
+      } catch {
+        // If JSON manipulation fails, just deselect
+        if (selectedNodeId === nodeId) {
+          setSelectedNodeId(null);
+        }
+      }
+    },
+    [input, parseResult, selectedNodeId, findNode]
+  );
 
   const selectedNode =
     parseResult?.root && selectedNodeId
