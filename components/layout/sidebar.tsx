@@ -22,7 +22,7 @@ interface Tool {
 const tools: Tool[] = [
   {
     name: 'ES Query',
-    href: '/es-query',
+    href: '/tools/es-query',
     icon: <Braces className="h-5 w-5" />,
   },
 ];
