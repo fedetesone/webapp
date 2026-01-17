@@ -31,48 +31,80 @@ const SAMPLE_QUERY = `{
   "size": 20
 }`;
 
+// Recursively remove empty arrays and objects from JSON
+function cleanupEmpty(obj: unknown): unknown {
+  if (Array.isArray(obj)) {
+    const cleaned = obj
+      .map((item) => cleanupEmpty(item))
+      .filter((item) => {
+        if (Array.isArray(item)) return item.length > 0;
+        if (typeof item === 'object' && item !== null)
+          return Object.keys(item).length > 0;
+        return true;
+      });
+    return cleaned;
+  }
+
+  if (typeof obj === 'object' && obj !== null) {
+    const cleaned: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(obj)) {
+      const cleanedValue = cleanupEmpty(value);
+      // Skip empty arrays and objects
+      if (Array.isArray(cleanedValue) && cleanedValue.length === 0) continue;
+      if (
+        typeof cleanedValue === 'object' &&
+        cleanedValue !== null &&
+        Object.keys(cleanedValue).length === 0
+      )
+        continue;
+      cleaned[key] = cleanedValue;
+    }
+    return cleaned;
+  }
+
+  return obj;
+}
+
 export default function ESQueryPage() {
-  const [input, setInput] = useState(SAMPLE_QUERY);
+  const [input, setInput] = useState(SAMPLE_QUERY); // Original input (left panel)
+  const [workingJson, setWorkingJson] = useState(SAMPLE_QUERY); // Modified version (tree/output)
   const [parseResult, setParseResult] = useState<ParseResult | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
-  // Undo history stack
+  // Undo history stack for tree modifications
   const undoStack = useRef<string[]>([]);
-  const isUndoing = useRef(false);
 
-  // Parse query whenever input changes
+  // Parse working JSON (used for tree and output)
   useEffect(() => {
-    const result = parseESQuery(input);
+    const result = parseESQuery(workingJson);
     setParseResult(result);
-    // Clear selection if parse failed
     if (!result.success) {
       setSelectedNodeId(null);
     }
-  }, [input]);
+  }, [workingJson]);
 
-  // Keyboard shortcut for undo (Ctrl+Z / Cmd+Z)
+  // When input changes (user typing), sync working JSON
+  const handleInputChange = useCallback((value: string) => {
+    setInput(value);
+    setWorkingJson(value);
+    // Clear undo stack when user manually edits
+    undoStack.current = [];
+  }, []);
+
+  // Keyboard shortcut for undo (Ctrl+Z / Cmd+Z) - only for tree modifications
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
         if (undoStack.current.length > 0) {
           e.preventDefault();
-          isUndoing.current = true;
           const previousState = undoStack.current.pop()!;
-          setInput(previousState);
-          // Small delay to reset the flag
-          setTimeout(() => {
-            isUndoing.current = false;
-          }, 0);
+          setWorkingJson(previousState);
         }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
-  const handleInputChange = useCallback((value: string) => {
-    setInput(value);
   }, []);
 
   const handleNodeSelect = useCallback((nodeId: string | null) => {
@@ -101,11 +133,10 @@ export default function ESQueryPage() {
       if (!nodeToRemove || nodeToRemove.meta.path.length === 0) return;
 
       try {
-        const json = JSON.parse(input);
+        let json = JSON.parse(workingJson);
         const path = nodeToRemove.meta.path;
 
         // Navigate to parent and remove the node
-        // Path looks like: ['query', 'bool', 'must', '0'] or ['query', 'script_score', 'query', 'bool']
         let current = json;
         const parentPath = path.slice(0, -1);
         const lastKey = path[path.length - 1];
@@ -126,11 +157,14 @@ export default function ESQueryPage() {
           delete current[lastKey];
         }
 
-        // Push current state to undo stack before updating
-        undoStack.current.push(input);
+        // Clean up empty arrays and objects
+        json = cleanupEmpty(json);
 
-        // Update input with modified JSON
-        setInput(JSON.stringify(json, null, 2));
+        // Push current state to undo stack before updating
+        undoStack.current.push(workingJson);
+
+        // Update working JSON (not the original input)
+        setWorkingJson(JSON.stringify(json, null, 2));
 
         // Clear selection
         if (selectedNodeId === nodeId) {
@@ -143,7 +177,7 @@ export default function ESQueryPage() {
         }
       }
     },
-    [input, parseResult, selectedNodeId, findNode]
+    [workingJson, parseResult, selectedNodeId, findNode]
   );
 
   const selectedNode =

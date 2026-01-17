@@ -65,6 +65,9 @@ function generateQueryBuilder(query: unknown, level: number = 2): string {
       if (boolObj.must) {
         const musts = Array.isArray(boolObj.must) ? boolObj.must : [boolObj.must];
         musts.forEach((m) => {
+          // Skip empty clauses
+          if (typeof m === 'object' && m !== null && Object.keys(m).length === 0)
+            return;
           parts.push(
             `${indent(level + 1)}.must(q -> q.${generateQueryBuilder(m, level + 2)})`
           );
@@ -76,6 +79,9 @@ function generateQueryBuilder(query: unknown, level: number = 2): string {
           ? boolObj.should
           : [boolObj.should];
         shoulds.forEach((s) => {
+          // Skip empty clauses
+          if (typeof s === 'object' && s !== null && Object.keys(s).length === 0)
+            return;
           parts.push(
             `${indent(level + 1)}.should(q -> q.${generateQueryBuilder(s, level + 2)})`
           );
@@ -87,6 +93,13 @@ function generateQueryBuilder(query: unknown, level: number = 2): string {
           ? boolObj.filter
           : [boolObj.filter];
         filters.forEach((f) => {
+          // Skip empty filters
+          if (
+            typeof f === 'object' &&
+            f !== null &&
+            Object.keys(f).length === 0
+          )
+            return;
           parts.push(
             `${indent(level + 1)}.filter(q -> q.${generateQueryBuilder(f, level + 2)})`
           );
@@ -98,6 +111,13 @@ function generateQueryBuilder(query: unknown, level: number = 2): string {
           ? boolObj.must_not
           : [boolObj.must_not];
         mustNots.forEach((mn) => {
+          // Skip empty clauses
+          if (
+            typeof mn === 'object' &&
+            mn !== null &&
+            Object.keys(mn).length === 0
+          )
+            return;
           parts.push(
             `${indent(level + 1)}.mustNot(q -> q.${generateQueryBuilder(mn, level + 2)})`
           );
