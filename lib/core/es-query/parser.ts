@@ -17,6 +17,11 @@ const CLAUSE_TYPES: Record<string, ESNodeType> = {
   range: 'range',
   exists: 'exists',
   nested: 'nested',
+  script_score: 'script_score',
+  knn: 'knn',
+  dis_max: 'dis_max',
+  constant_score: 'constant_score',
+  match_none: 'match_none',
 };
 
 const AGG_TYPES: Record<string, ESNodeType> = {
@@ -108,6 +113,132 @@ function parseQueryClause(key: string, value: unknown, path: string[]): ESNode {
     const valueObj = value as Record<string, unknown>;
     return createNode('exists', value, clausePath, {
       params: valueObj,
+    });
+  }
+
+  // script_score query - wraps another query with custom scoring
+  if (key === 'script_score' && typeof value === 'object' && value !== null) {
+    const scoreObj = value as Record<string, unknown>;
+    const node = createNode('script_score', value, clausePath, {
+      params: {
+        min_score: scoreObj.min_score,
+        script: scoreObj.script,
+      },
+    });
+
+    // Parse the inner query
+    if (scoreObj.query && typeof scoreObj.query === 'object') {
+      const innerQuery = scoreObj.query as Record<string, unknown>;
+      for (const [k, v] of Object.entries(innerQuery)) {
+        node.children.push(parseQueryClause(k, v, [...clausePath, 'query']));
+      }
+    }
+
+    return node;
+  }
+
+  // knn query - k-nearest neighbors for vector search
+  if (key === 'knn' && typeof value === 'object' && value !== null) {
+    const knnObj = value as Record<string, unknown>;
+    const node = createNode('knn', value, clausePath, {
+      field: knnObj.field as string | undefined,
+      params: {
+        k: knnObj.k,
+        num_candidates: knnObj.num_candidates,
+        boost: knnObj.boost,
+        similarity: knnObj.similarity,
+        _name: knnObj._name,
+        query_vector: knnObj.query_vector,
+      },
+    });
+
+    // Parse filters inside knn
+    if (knnObj.filter) {
+      const filterNode = createNode('filter', knnObj.filter, [
+        ...clausePath,
+        'filter',
+      ]);
+
+      const filters = Array.isArray(knnObj.filter)
+        ? knnObj.filter
+        : [knnObj.filter];
+
+      (filters as unknown[]).forEach((f, i) => {
+        if (typeof f === 'object' && f !== null) {
+          Object.entries(f as Record<string, unknown>).forEach(([k, v]) => {
+            filterNode.children.push(
+              parseQueryClause(k, v, [...clausePath, 'filter', String(i)])
+            );
+          });
+        }
+      });
+
+      node.children.push(filterNode);
+    }
+
+    return node;
+  }
+
+  // dis_max query - disjunction max
+  if (key === 'dis_max' && typeof value === 'object' && value !== null) {
+    const disMaxObj = value as Record<string, unknown>;
+    const node = createNode('dis_max', value, clausePath, {
+      params: {
+        boost: disMaxObj.boost,
+        tie_breaker: disMaxObj.tie_breaker,
+        _name: disMaxObj._name,
+      },
+    });
+
+    // Parse the queries array
+    if (disMaxObj.queries && Array.isArray(disMaxObj.queries)) {
+      (disMaxObj.queries as unknown[]).forEach((query, i) => {
+        if (typeof query === 'object' && query !== null) {
+          Object.entries(query as Record<string, unknown>).forEach(([k, v]) => {
+            node.children.push(
+              parseQueryClause(k, v, [...clausePath, 'queries', String(i)])
+            );
+          });
+        }
+      });
+    }
+
+    return node;
+  }
+
+  // constant_score query - wraps a filter with constant boost
+  if (key === 'constant_score' && typeof value === 'object' && value !== null) {
+    const constObj = value as Record<string, unknown>;
+    const node = createNode('constant_score', value, clausePath, {
+      params: {
+        boost: constObj.boost,
+        _name: constObj._name,
+      },
+    });
+
+    // Parse the filter
+    if (constObj.filter && typeof constObj.filter === 'object') {
+      const filterQuery = constObj.filter as Record<string, unknown>;
+      for (const [k, v] of Object.entries(filterQuery)) {
+        node.children.push(
+          parseQueryClause(k, v, [...clausePath, 'filter'])
+        );
+      }
+    }
+
+    return node;
+  }
+
+  // match_none - matches no documents
+  if (key === 'match_none') {
+    return createNode('match_none', value, clausePath);
+  }
+
+  // multi_match query - search across multiple fields
+  if (key === 'multi_match' && typeof value === 'object' && value !== null) {
+    const mmObj = value as Record<string, unknown>;
+    return createNode('multi_match', value, clausePath, {
+      params: mmObj,
     });
   }
 

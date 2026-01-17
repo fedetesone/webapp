@@ -21,6 +21,11 @@ const TYPE_COLORS: Record<string, string> = {
   range: 'bg-teal-500',
   exists: 'bg-cyan-500',
   nested: 'bg-violet-500',
+  script_score: 'bg-fuchsia-500',
+  knn: 'bg-pink-500',
+  dis_max: 'bg-amber-600',
+  constant_score: 'bg-sky-500',
+  match_none: 'bg-gray-400',
   aggs: 'bg-orange-500',
   agg_terms: 'bg-orange-400',
   agg_histogram: 'bg-orange-600',
@@ -52,6 +57,11 @@ function getTypeLabel(type: string): string {
     range: 'range',
     exists: 'exists',
     nested: 'nested',
+    script_score: 'script_score',
+    knn: 'knn',
+    dis_max: 'dis_max',
+    constant_score: 'constant_score',
+    match_none: 'match_none',
     aggs: 'Aggregations',
     agg_terms: 'terms',
     agg_histogram: 'histogram',
@@ -109,6 +119,50 @@ function getValuePreview(node: ESNode): string | null {
   // For size/from
   if (type === 'size' || type === 'from') {
     return String(params.value);
+  }
+
+  // For knn query
+  if (type === 'knn') {
+    const parts: string[] = [];
+    if (field) parts.push(field);
+    if (params.k) parts.push(`k=${params.k}`);
+    if (params._name) parts.push(`(${params._name})`);
+    return parts.join(' ');
+  }
+
+  // For script_score
+  if (type === 'script_score') {
+    if (params.min_score !== undefined) {
+      return `min_score: ${params.min_score}`;
+    }
+    return null;
+  }
+
+  // For dis_max
+  if (type === 'dis_max') {
+    const parts: string[] = [];
+    if (params.boost) parts.push(`boost=${params.boost}`);
+    if (params._name) parts.push(`(${params._name})`);
+    return parts.length > 0 ? parts.join(' ') : null;
+  }
+
+  // For constant_score
+  if (type === 'constant_score') {
+    const parts: string[] = [];
+    if (params.boost) parts.push(`boost=${params.boost}`);
+    if (params._name) parts.push(`(${params._name})`);
+    return parts.length > 0 ? parts.join(' ') : null;
+  }
+
+  // For multi_match
+  if (type === 'multi_match') {
+    const query = params.query as string | undefined;
+    const fields = params.fields as string[] | undefined;
+    if (query && fields) {
+      return `"${query}" → [${fields.length} fields]`;
+    }
+    if (query) return `"${query}"`;
+    return null;
   }
 
   return null;
