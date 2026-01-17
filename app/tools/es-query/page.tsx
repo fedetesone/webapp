@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { Braces } from 'lucide-react';
 import {
   parseESQuery,
@@ -36,6 +36,10 @@ export default function ESQueryPage() {
   const [parseResult, setParseResult] = useState<ParseResult | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
+  // Undo history stack
+  const undoStack = useRef<string[]>([]);
+  const isUndoing = useRef(false);
+
   // Parse query whenever input changes
   useEffect(() => {
     const result = parseESQuery(input);
@@ -45,6 +49,27 @@ export default function ESQueryPage() {
       setSelectedNodeId(null);
     }
   }, [input]);
+
+  // Keyboard shortcut for undo (Ctrl+Z / Cmd+Z)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+        if (undoStack.current.length > 0) {
+          e.preventDefault();
+          isUndoing.current = true;
+          const previousState = undoStack.current.pop()!;
+          setInput(previousState);
+          // Small delay to reset the flag
+          setTimeout(() => {
+            isUndoing.current = false;
+          }, 0);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const handleInputChange = useCallback((value: string) => {
     setInput(value);
@@ -96,11 +121,13 @@ export default function ESQueryPage() {
           const index = parseInt(lastKey, 10);
           if (!isNaN(index)) {
             current.splice(index, 1);
-            // If array is now empty, we might want to remove it too
           }
         } else if (typeof current === 'object' && current !== null) {
           delete current[lastKey];
         }
+
+        // Push current state to undo stack before updating
+        undoStack.current.push(input);
 
         // Update input with modified JSON
         setInput(JSON.stringify(json, null, 2));
