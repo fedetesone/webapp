@@ -8,6 +8,7 @@ export interface Suggestion {
   apply: (root: ESNode) => ESNode;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function analyzeSuggestions(_root: ESNode): Suggestion[] {
   // TODO: Implement in v2
   return [];
