@@ -48,4 +48,43 @@ describe('parseESQuery', () => {
     expect(boolNode?.type).toBe('bool');
     expect(boolNode?.children).toHaveLength(3);
   });
+
+  it('should parse range query', () => {
+    const json = JSON.stringify({
+      query: {
+        range: {
+          price: {
+            gte: 10,
+            lte: 100,
+          },
+        },
+      },
+    });
+
+    const result = parseESQuery(json);
+
+    expect(result.success).toBe(true);
+    const rangeNode = result.root?.children[0];
+    expect(rangeNode?.type).toBe('range');
+    expect(rangeNode?.field).toBe('price');
+    expect(rangeNode?.params.gte).toBe(10);
+    expect(rangeNode?.params.lte).toBe(100);
+  });
+
+  it('should parse exists query', () => {
+    const json = JSON.stringify({
+      query: {
+        exists: {
+          field: 'user',
+        },
+      },
+    });
+
+    const result = parseESQuery(json);
+
+    expect(result.success).toBe(true);
+    const existsNode = result.root?.children[0];
+    expect(existsNode?.type).toBe('exists');
+    expect(existsNode?.params.field).toBe('user');
+  });
 });

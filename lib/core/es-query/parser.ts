@@ -103,6 +103,14 @@ function parseQueryClause(key: string, value: unknown, path: string[]): ESNode {
     return node;
   }
 
+  // Exists query - special case (no field name pattern)
+  if (key === 'exists' && typeof value === 'object' && value !== null) {
+    const valueObj = value as Record<string, unknown>;
+    return createNode('exists', value, clausePath, {
+      params: valueObj,
+    });
+  }
+
   // Match, term, etc. - field-level queries
   if (CLAUSE_TYPES[key] && typeof value === 'object' && value !== null) {
     const valueObj = value as Record<string, unknown>;
