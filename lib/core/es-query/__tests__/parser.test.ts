@@ -87,4 +87,55 @@ describe('parseESQuery', () => {
     expect(existsNode?.type).toBe('exists');
     expect(existsNode?.params.field).toBe('user');
   });
+
+  it('should parse terms aggregation', () => {
+    const json = JSON.stringify({
+      aggs: {
+        categories: {
+          terms: {
+            field: 'category',
+            size: 10,
+          },
+        },
+      },
+    });
+
+    const result = parseESQuery(json);
+
+    expect(result.success).toBe(true);
+    const aggsNode = result.root?.children.find((c) => c.type === 'aggs');
+    expect(aggsNode).toBeDefined();
+    expect(aggsNode?.children).toHaveLength(1);
+    expect(aggsNode?.children[0].type).toBe('agg_terms');
+    expect(aggsNode?.children[0].name).toBe('categories');
+    expect(aggsNode?.children[0].field).toBe('category');
+  });
+
+  it('should parse nested aggregations', () => {
+    const json = JSON.stringify({
+      aggs: {
+        categories: {
+          terms: {
+            field: 'category',
+          },
+          aggs: {
+            avg_price: {
+              avg: {
+                field: 'price',
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const result = parseESQuery(json);
+
+    expect(result.success).toBe(true);
+    const aggsNode = result.root?.children.find((c) => c.type === 'aggs');
+    const termsAgg = aggsNode?.children[0];
+    expect(termsAgg?.children).toHaveLength(1);
+    expect(termsAgg?.children[0].type).toBe('agg_avg');
+    expect(termsAgg?.children[0].name).toBe('avg_price');
+  });
 });
