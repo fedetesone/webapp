@@ -86,6 +86,23 @@ function getValuePreview(node: ESNode): string | null {
     return field ? `${name} (${field})` : name;
   }
 
+  // For terms queries - show field, values, and optional name
+  if (type === 'terms' && field) {
+    const values = params.values as unknown[];
+    const valuesPreview =
+      values && values.length <= 2
+        ? values.map((v) => `"${v}"`).join(', ')
+        : `${values?.length || 0} values`;
+    const nameTag = params._name ? ` (${params._name})` : '';
+    return `${field}: [${valuesPreview}]${nameTag}`;
+  }
+
+  // For term queries - show field, value, and optional name
+  if (type === 'term' && field) {
+    const nameTag = params._name ? ` (${params._name})` : '';
+    return `${field}: "${params.value}"${nameTag}`;
+  }
+
   // For field-based queries
   if (field) {
     const value =

@@ -242,6 +242,51 @@ function parseQueryClause(key: string, value: unknown, path: string[]): ESNode {
     });
   }
 
+  // terms query - special handling for _name at same level as field
+  if (key === 'terms' && typeof value === 'object' && value !== null) {
+    const termsObj = value as Record<string, unknown>;
+    // Find the actual field (not _name, boost, or other metadata)
+    const metaKeys = ['_name', 'boost'];
+    const fieldName = Object.keys(termsObj).find((k) => !metaKeys.includes(k));
+    const values = fieldName ? termsObj[fieldName] : [];
+
+    return createNode('terms', value, clausePath, {
+      field: fieldName,
+      name: termsObj._name as string | undefined,
+      params: {
+        values: Array.isArray(values) ? values : [values],
+        _name: termsObj._name,
+        boost: termsObj.boost,
+      },
+    });
+  }
+
+  // term query - special handling for _name at same level as field
+  if (key === 'term' && typeof value === 'object' && value !== null) {
+    const termObj = value as Record<string, unknown>;
+    const metaKeys = ['_name', 'boost'];
+    const fieldName = Object.keys(termObj).find((k) => !metaKeys.includes(k));
+    const fieldValue = fieldName ? termObj[fieldName] : undefined;
+
+    const actualValue =
+      typeof fieldValue === 'object' && fieldValue !== null
+        ? (fieldValue as Record<string, unknown>).value
+        : fieldValue;
+
+    return createNode('term', value, clausePath, {
+      field: fieldName,
+      name: termObj._name as string | undefined,
+      params: {
+        value: actualValue,
+        _name: termObj._name,
+        boost: termObj.boost,
+        ...(typeof fieldValue === 'object' && fieldValue !== null
+          ? (fieldValue as Record<string, unknown>)
+          : {}),
+      },
+    });
+  }
+
   // Match, term, etc. - field-level queries
   if (CLAUSE_TYPES[key] && typeof value === 'object' && value !== null) {
     const valueObj = value as Record<string, unknown>;

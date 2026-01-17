@@ -66,17 +66,72 @@ function generateSummary(root: ESNode): string {
 
       case 'term': {
         const value = node.params.value;
-        lines.push(`${pad}${node.field} = "${value}"`);
+        const nameTag = node.params._name ? ` [${node.params._name}]` : '';
+        lines.push(`${pad}${node.field} = "${value}"${nameTag}`);
         break;
       }
 
       case 'terms': {
-        const values = node.params.values || node.params.value;
+        const values = (node.params.values || node.params.value) as unknown[];
+        const nameTag = node.params._name ? ` [${node.params._name}]` : '';
         if (Array.isArray(values)) {
-          lines.push(`${pad}${node.field} in [${values.length} values]`);
+          if (values.length <= 3) {
+            const valuesStr = values.map((v) => `"${v}"`).join(', ');
+            lines.push(`${pad}${node.field} in [${valuesStr}]${nameTag}`);
+          } else {
+            lines.push(`${pad}${node.field} in [${values.length} values]${nameTag}`);
+          }
         }
         break;
       }
+
+      case 'script_score': {
+        const minScore = node.params.min_score;
+        lines.push(`${pad}Script Score Query`);
+        if (minScore !== undefined) {
+          lines.push(`${pad}  min_score: ${minScore}`);
+        }
+        node.children.forEach((child) => processNode(child, indent + 1));
+        break;
+      }
+
+      case 'knn': {
+        const k = node.params.k;
+        const nameTag = node.params._name ? ` [${node.params._name}]` : '';
+        lines.push(`${pad}KNN on ${node.field} (k=${k})${nameTag}`);
+        node.children.forEach((child) => processNode(child, indent + 1));
+        break;
+      }
+
+      case 'dis_max': {
+        const boost = node.params.boost;
+        const nameTag = node.params._name ? ` [${node.params._name}]` : '';
+        const boostStr = boost ? ` (boost=${boost})` : '';
+        lines.push(`${pad}Best match of:${boostStr}${nameTag}`);
+        node.children.forEach((child) => processNode(child, indent + 1));
+        break;
+      }
+
+      case 'constant_score': {
+        const boost = node.params.boost;
+        const nameTag = node.params._name ? ` [${node.params._name}]` : '';
+        lines.push(`${pad}Constant score (boost=${boost})${nameTag}`);
+        node.children.forEach((child) => processNode(child, indent + 1));
+        break;
+      }
+
+      case 'multi_match': {
+        const query = node.params.query;
+        const fields = node.params.fields as string[] | undefined;
+        const boost = node.params.boost;
+        const boostStr = boost ? ` (boost=${boost})` : '';
+        lines.push(`${pad}Multi-match "${query}" in [${fields?.join(', ') || '?'}]${boostStr}`);
+        break;
+      }
+
+      case 'match_none':
+        lines.push(`${pad}Match nothing`);
+        break;
 
       case 'range': {
         const parts: string[] = [];
