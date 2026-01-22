@@ -77,7 +77,7 @@ function parseQueryClause(key: string, value: unknown, path: string[]): ESNode {
     const node = createNode('bool', value, clausePath);
     const boolObj = value as Record<string, unknown>;
 
-    for (const boolKey of ['must', 'should', 'must_not', 'filter']) {
+    for (const boolKey of ['filter', 'must', 'must_not', 'should']) {
       if (boolObj[boolKey]) {
         const clauseNode = createNode(
           CLAUSE_TYPES[boolKey] || 'unknown',
@@ -223,6 +223,29 @@ function parseQueryClause(key: string, value: unknown, path: string[]): ESNode {
         node.children.push(
           parseQueryClause(k, v, [...clausePath, 'filter'])
         );
+      }
+    }
+
+    return node;
+  }
+
+  // nested query - queries on nested documents
+  if (key === 'nested' && typeof value === 'object' && value !== null) {
+    const nestedObj = value as Record<string, unknown>;
+    const node = createNode('nested', value, clausePath, {
+      params: {
+        path: nestedObj.path,
+        score_mode: nestedObj.score_mode,
+        ignore_unmapped: nestedObj.ignore_unmapped,
+        _name: nestedObj._name,
+      },
+    });
+
+    // Parse the inner query
+    if (nestedObj.query && typeof nestedObj.query === 'object') {
+      const innerQuery = nestedObj.query as Record<string, unknown>;
+      for (const [k, v] of Object.entries(innerQuery)) {
+        node.children.push(parseQueryClause(k, v, [...clausePath, 'query']));
       }
     }
 

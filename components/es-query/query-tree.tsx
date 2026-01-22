@@ -171,6 +171,15 @@ function getValuePreview(node: ESNode): string | null {
     return parts.length > 0 ? parts.join(' ') : null;
   }
 
+  // For nested queries
+  if (type === 'nested') {
+    const parts: string[] = [];
+    if (params.path) parts.push(`path: ${params.path}`);
+    if (params.score_mode) parts.push(`score_mode=${params.score_mode}`);
+    if (params._name) parts.push(`(${params._name})`);
+    return parts.length > 0 ? parts.join(' ') : null;
+  }
+
   // For multi_match
   if (type === 'multi_match') {
     const query = params.query as string | undefined;

@@ -138,4 +138,39 @@ describe('parseESQuery', () => {
     expect(termsAgg?.children[0].type).toBe('agg_avg');
     expect(termsAgg?.children[0].name).toBe('avg_price');
   });
+
+  it('should parse nested query with inner bool query', () => {
+    const json = JSON.stringify({
+      query: {
+        nested: {
+          path: 'material',
+          query: {
+            bool: {
+              must: [
+                { term: { 'material.name': { value: 'leather' } } },
+                { term: { 'material.is_significant': { value: true } } },
+              ],
+            },
+          },
+        },
+      },
+    });
+
+    const result = parseESQuery(json);
+
+    expect(result.success).toBe(true);
+    const nestedNode = result.root?.children[0];
+    expect(nestedNode?.type).toBe('nested');
+    expect(nestedNode?.params.path).toBe('material');
+    // Should have the inner bool query as child
+    expect(nestedNode?.children).toHaveLength(1);
+    expect(nestedNode?.children[0].type).toBe('bool');
+    // Bool should have must clause with 2 term queries
+    const mustNode = nestedNode?.children[0].children.find(
+      (c) => c.type === 'must'
+    );
+    expect(mustNode?.children).toHaveLength(2);
+    expect(mustNode?.children[0].type).toBe('term');
+    expect(mustNode?.children[1].type).toBe('term');
+  });
 });
